@@ -1,61 +1,104 @@
-import { useState, useEffect } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect, useState } from "react";
+import PokemonCard from "./components/PokemonCard";
 
 function App() {
-  const [count, setCount] = useState(0)
-  const [data, setData] = useState(null)
+  const [pokemon, setPokemon] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [selectedPokemon, setSelectedPokemon] = useState(null);
 
   useEffect(() => {
-    const url = `https://pokeapi.co/api/v2/pokemon/${count}`;
+    async function fetchPokemon() {
+      try {
+        const response = await fetch(
+          "https://pokeapi.co/api/v2/pokemon?limit=151"
+        );
 
-    const fetchPokemon = () => {
-      fetch(url)
-      .then((response) => {
-        if(!response.ok) {
-          throw new Error(`This aint working b/c ${response.status}`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch Pokémon");
         }
-        return response.json();
-      })
-      .then((json) => {
-        console.log(json.species.name);
-        // Maybe you should change the state like this:
-        setData(json);
-      })
-      .catch((error)=> {
-        console.error(error.message);
-      })
-    }
-    fetchPokemon();
 
-  }, [count])
+        const data = await response.json();
+
+        setPokemon(data.results);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchPokemon();
+  }, []);
+
+  async function fetchPokemonDetails(name) {
+    try {
+      const response = await fetch(
+        `https://pokeapi.co/api/v2/pokemon/${name}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch details");
+      }
+
+      const data = await response.json();
+
+      setSelectedPokemon(data);
+    } catch (err) {
+      console.log(err);
+    }
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          {data ? `Pokemon: ${data.species.name}` : 'Loading...'}
-          {/* Edit <code>src/App.jsx</code> and save to test HMR */}
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <main className="app">
+      <h1 className="title">NYC Pokédex 🗽</h1>
+
+      {loading && <h2>Loading Pokémon...</h2>}
+
+      {error && <h2>{error}</h2>}
+
+      <section className="pokemon-grid">
+        {pokemon.map((poke) => (
+          <PokemonCard
+            key={poke.name}
+            name={poke.name}
+            image={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${
+              pokemon.indexOf(poke) + 1
+            }.png`}
+            onClick={() => fetchPokemonDetails(poke.name)}
+          />
+        ))}
+      </section>
+
+      {selectedPokemon && (
+        <section className="details">
+          <h2>{selectedPokemon.name.toUpperCase()}</h2>
+
+          <img
+            src={selectedPokemon.sprites.front_default}
+            alt={selectedPokemon.name}
+          />
+
+          <p>
+            <strong>Height:</strong> {selectedPokemon.height}
+          </p>
+
+          <p>
+            <strong>Weight:</strong> {selectedPokemon.weight}
+          </p>
+
+          <p>
+            <strong>Type:</strong>{" "}
+            {selectedPokemon.types.map((type) => type.type.name).join(", ")}
+          </p>
+
+          <button onClick={() => setSelectedPokemon(null)}>
+            Close
+          </button>
+        </section>
+      )}
+    </main>
+  );
 }
 
-export default App
+export default App;
